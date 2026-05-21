@@ -9,7 +9,6 @@ from openai import OpenAI
 from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
-from sentence_transformers import SentenceTransformer
 
 from app.db_client import get_collection_name, get_vector_search_sql
 
@@ -46,6 +45,9 @@ def get_embedder() -> tuple[EmbedFn, int]:
             return list(response.data[0].embedding)
 
         return openai_embed, _get_openai_embedding_dimension(embedding_model)
+
+    # Import the local model stack only when that provider is actually selected.
+    from sentence_transformers import SentenceTransformer
 
     model_name = os.getenv("EMBEDDINGS_MODEL", "all-MiniLM-L6-v2")
     model = SentenceTransformer(model_name)
