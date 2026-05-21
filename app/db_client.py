@@ -106,7 +106,7 @@ def ensure_collection(pool: ConnectionPool, vector_size: int) -> None:
                 CREATE TABLE IF NOT EXISTS {} (
                     doc_id TEXT PRIMARY KEY,
                     text TEXT NOT NULL,
-                    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    metadata JSONB NOT NULL DEFAULT '{{}}'::jsonb,
                     embedding {} NOT NULL
                 )
                 """
