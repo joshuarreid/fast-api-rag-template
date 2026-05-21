@@ -13,6 +13,27 @@ def get_collection_name() -> str:
     return os.getenv("VECTOR_TABLE_NAME") or os.getenv("COLLECTION_NAME", "documents")
 
 
+def get_collection_parts() -> tuple[str | None, str]:
+    """Split an optional schema-qualified collection name into safe SQL identifier parts."""
+    collection_name = get_collection_name().strip()
+    parts = [part.strip() for part in collection_name.split(".") if part.strip()]
+    if not parts:
+        raise ValueError("VECTOR_TABLE_NAME must not be empty")
+    if len(parts) == 1:
+        return None, parts[0]
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    raise ValueError("VECTOR_TABLE_NAME must be either <table> or <schema>.<table>")
+
+
+def get_collection_identifier() -> sql.Identifier:
+    """Return the configured collection as a psycopg SQL identifier."""
+    schema_name, table_name = get_collection_parts()
+    if schema_name:
+        return sql.Identifier(schema_name, table_name)
+    return sql.Identifier(table_name)
+
+
 def get_database_url() -> str:
     """Build a PostgreSQL connection string from either a full URL or PG* parts."""
     database_url = os.getenv("DATABASE_URL") or os.getenv("VECTORDB_URL")
@@ -93,9 +114,10 @@ def ensure_collection(pool: ConnectionPool, vector_size: int) -> None:
     if vector_size <= 0:
         raise ValueError("VECTOR_SIZE must be a positive integer")
 
-    collection_name = get_collection_name()
+    schema_name, table_name = get_collection_parts()
+    collection_identifier = get_collection_identifier()
     vector_type = sql.SQL("VECTOR({})").format(sql.SQL(str(vector_size)))
-    index_name = f"{collection_name}_embedding_idx"
+    index_name = f"{table_name}_embedding_idx"
 
     with pool.connection() as conn:
         # The extension provides the VECTOR type and similarity operators used later.
@@ -110,7 +132,7 @@ def ensure_collection(pool: ConnectionPool, vector_size: int) -> None:
                     embedding {} NOT NULL
                 )
                 """
-            ).format(sql.Identifier(collection_name), vector_type)
+            ).format(collection_identifier, vector_type)
         )
 
         opclass = _get_vector_index_opclass()
@@ -121,7 +143,7 @@ def ensure_collection(pool: ConnectionPool, vector_size: int) -> None:
                     "CREATE INDEX IF NOT EXISTS {} ON {} USING hnsw (embedding {})"
                 ).format(
                     sql.Identifier(index_name),
-                    sql.Identifier(collection_name),
+                    collection_identifier,
                     sql.SQL(opclass),
                 )
             )

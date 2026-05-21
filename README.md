@@ -4,7 +4,7 @@ A reusable FastAPI starter for retrieval-augmented generation with DigitalOcean 
 
 ## Features
 
-- FastAPI service with `/health`, `/ingest`, and `/rag` endpoints
+- FastAPI service with `/health`, `/ingest`, `/documents/{doc_id}`, and `/rag` endpoints
 - Environment-based configuration for DigitalOcean Managed PostgreSQL with pgvector
 - Embeddings via sentence-transformers or OpenAI
 - Automatic pgvector extension, table, and index creation on startup
@@ -55,6 +55,7 @@ RAG_TOP_K=3
 Notes:
 
 - Use `EMBEDDINGS_PROVIDER=openai` to generate embeddings with OpenAI instead of sentence-transformers.
+- `VECTOR_TABLE_NAME` may be either a plain table name like `documents` or a schema-qualified name like `appdata.documents`.
 - For `sentence_transformers`, keep `VECTOR_SIZE` aligned with the model dimension. `all-MiniLM-L6-v2` uses `384`.
 - For `openai`, `text-embedding-3-small` uses `1536` and `text-embedding-3-large` uses `3072`.
 - `VECTOR_DISTANCE=cosine` is the safest default for semantic search. `dot`, `euclid`, and `manhattan` are also supported.
@@ -93,6 +94,23 @@ curl -X POST http://localhost:8080/ingest \
     "doc_id": "doc-1",
     "text": "FastAPI is a modern Python web framework for building APIs.",
     "metadata": {"source": "example"}
+  }'
+```
+
+Delete a document:
+
+```bash
+curl -X DELETE http://localhost:8080/documents/doc-1
+```
+
+Update a document:
+
+```bash
+curl -X PUT http://localhost:8080/documents/doc-1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "FastAPI is a Python framework for building APIs quickly.",
+    "metadata": {"source": "updated-example"}
   }'
 ```
 

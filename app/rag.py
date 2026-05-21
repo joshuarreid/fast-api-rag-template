@@ -10,7 +10,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from app.db_client import get_collection_name, get_vector_search_sql
+from app.db_client import get_collection_identifier, get_vector_search_sql
 
 
 EmbedFn = Callable[[str], list[float]]
@@ -78,7 +78,7 @@ def get_context(query: str, pool: ConnectionPool, embed: EmbedFn) -> tuple[str, 
                     """
                 ).format(
                     score_sql=sql.SQL(score_sql),
-                    table_name=sql.Identifier(get_collection_name()),
+                    table_name=get_collection_identifier(),
                     order_by_sql=sql.SQL(order_by_sql),
                 ),
                 (query_vector, query_vector, int(os.getenv("RAG_TOP_K", "3"))),
