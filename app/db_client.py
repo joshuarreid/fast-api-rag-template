@@ -4,7 +4,7 @@ import os
 from urllib.parse import quote
 
 from pgvector.psycopg import register_vector
-from psycopg import sql
+from psycopg import connect, sql
 from psycopg_pool import ConnectionPool
 
 
@@ -39,6 +39,8 @@ def get_database_url() -> str:
 
 def get_db_pool() -> ConnectionPool:
     """Create a small shared pool and register pgvector on every connection."""
+    bootstrap_vector_extension()
+
     pool = ConnectionPool(
         conninfo=get_database_url(),
         min_size=1,
@@ -49,6 +51,13 @@ def get_db_pool() -> ConnectionPool:
     pool.open()
     pool.wait()
     return pool
+
+
+def bootstrap_vector_extension() -> None:
+    """Ensure the pgvector extension exists before pooled connections register its types."""
+    with connect(get_database_url(), autocommit=True) as conn:
+        conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        register_vector(conn)
 
 
 def get_vector_distance() -> str:
